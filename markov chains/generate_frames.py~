@@ -1,0 +1,40 @@
+import numpy as np
+import pandas as pd
+import os
+
+path_wig = os.path.dirname(os.getcwd())
+path_prices = os.path.join(path_wig, 'prices')
+path_diffs = os.path.join(os.path.join(path_wig, 'markov chains'), 'diffs')
+
+def process_comp(company_fname):
+    df = pd.read_csv(os.path.join(path_prices, company_fname)).set_index('Unnamed: 0')
+    
+    dates = df.index
+    truones = df[['<CLOSE>', '<VOL>']]
+    truones.columns = ['orig_prices', 'orig_vols']
+    prices = df['<CLOSE>'].as_matrix()
+    vol = df['<VOL>'].as_matrix()
+    dataframes = []
+    add_df = dataframes.append
+    add_df(truones)
+    
+    for shift in [1,2,5,7,10,14,30]:
+        if shift > len(df):
+            break
+        price_diff = ((prices[shift:] - np.roll(prices, shift=shift, axis=0)[shift:])/prices[shift:] > 0).astype(int)
+        vol_diff = ((vol[shift:] - np.roll(vol, shift=shift, axis=0)[shift:])/vol[shift:] > 0).astype(int)
+        
+        data = np.vstack([price_diff, vol_diff]).T
+        data = np.vstack([np.repeat(np.array([[-1,-1]]), shift, axis=0), data])
+        
+        add_df(pd.DataFrame(data=data, columns=['price_'+str(shift),'vol_'+str(shift)], index=dates))
+        
+    final_df = pd.concat(dataframes, axis=1)
+    return final_df
+   
+
+for comp in os.listdir(path_prices):
+    print(comp)
+    df = process_comp(comp)
+    df.to_csv(os.path.join(path_diffs, comp))
+

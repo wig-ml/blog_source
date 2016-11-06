@@ -88,7 +88,10 @@ class PortfolioManager:
                     
                     recall = {0: scores[0,0]/sum(scores[:, 0]), 1:scores[1, 1]/sum(scores[:, 1])}
                     
-                    up_prob = recall[1]*p/(recall[0]*(1-p)+recall[1]*p)
+                    if arg:
+                        up_prob = p*recall[1]/(p*recall[1]+(1-p)*(1-recall[0]))
+                    else:
+                        up_prob = p*recall[1]/(p*(1-recall[1])+(1-p)*recall[0])
                     
                     probs_clf_dict[key].append([x, up_prob, 1-up_prob])
                     
@@ -96,6 +99,7 @@ class PortfolioManager:
                 ups = list(zip(*heapq.nlargest(5, probs[:,[0,1]], key=operator.itemgetter(1) )))
                 downs = list(zip(*heapq.nlargest(5, probs[:,[0,2]], key=operator.itemgetter(1) )))
                 probs_clf_dict[key] = {'ups':dict(zip(*ups)), 'downs':dict(zip(*downs))}
+                #przydalby sie przedzial ufnosci dla kazdej zmiennej, ale na razie zadowolimy sie srednimi
                 
             app_up, app_down = NewDict(), NewDict()
             for key in probs_clf_dict.keys():
@@ -144,4 +148,5 @@ class PortfolioManager:
             c += amount*prices[ind-int(ind==len(df))]
         return c
             
+    
     

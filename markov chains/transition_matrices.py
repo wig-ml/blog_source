@@ -18,7 +18,8 @@ class SemiMarkovChain:
     def reset_dict(self):
         self.price_dict = {}
 
-    def build(self, start_date='19900101', end_date='20151230'):
+    def build(self, start_date='19900101', end_date='20151230', test_end='20161230'):
+        self.test_end = int(test_end)
         scrape = datetime.strptime
         price_dict, vol_dict = {}, {}
         length = self.length
@@ -30,9 +31,16 @@ class SemiMarkovChain:
         for i in range(A.shape[1]):
             c = ''.join(list(map(str,A[:,i])))
             self.price_dict[c] = [0,0]
-
+        print(self.companies)
         for comp in self.companies:
-            df = pd.read_csv(os.path.join(self.path_diffs,comp)).set_index('<DTYYYYMMDD>')
+            print('alalla')
+            df = pd.read_csv(os.path.join(self.path_diffs,comp))
+            print(df.columns)
+            if '<DTYYYYMMDD>' not in df.columns:
+                continue
+            else:
+                print(comp)
+                df.set_index('<DTYYYYMMDD>', inplace=True)
             if 'price_' + str(self.shift) not in df.columns:
                 continue
             
@@ -56,13 +64,19 @@ class SemiMarkovChain:
     def test_matrix(self):
         scores = [0,0]
         for comp in self.companies:
-            df = pd.read_csv(os.path.join(self.path_diffs,comp)).set_index('<DTYYYYMMDD>')
+            df = pd.read_csv(os.path.join(self.path_diffs,comp))
+            if '<DTYYYYMMDD>' not in df.columns:
+                continue
+            else:
+                df.set_index('<DTYYYYMMDD>', inplace=True)
             if 'price_' + str(self.shift) not in df.columns:
                 continue
 
             end = self.end_times[comp]
-            p = df['price_' + str(self.shift)].as_matrix()[end:]
-            values = df['orig_prices'].as_matrix()[end:]
+            dates = df.index
+            true_end = bisect(dates, self.test_end)
+            p = df['price_' + str(self.shift)].as_matrix()[end:true_end]
+            values = df['orig_prices'].as_matrix()[end:true_end]
             for run in range(self.shift):
                 things = p[run::self.shift]
                 for slice_step in range(len(things)- self.length - self.reach):
