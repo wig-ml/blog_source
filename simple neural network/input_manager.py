@@ -85,10 +85,24 @@ class InputManager:
         sample_std = np.std(self.samples)
         self.samples = (self.samples-sample_mean)/sample_std
         
-    def diff(self, inplace=False):
+
+    def polynom(self, inplace=True, degree=2):
         if len(self.samples)==0:
             print('no samples to preprocess')
-        C = np.asarray(self.samples - np.roll(self.samples, shift=1))[:, 1:]/self.samples[:, 1:]
+            
+        pf = PF(degree=degree, interaction_only=True, include_bias=False)
+        if inplace:
+            self.samples = pf.fit_transform(self.samples)
+            return
+        return pf.fit_transform(self.samples)
+        
+    
+    
+    def rel(self, inplace=False):
+        if len(self.samples) == 0:
+            print('no samples to preprocess')
+            
+        C = (self.samples[:, -1][None].T - self.samples[:, :-1])/self.samples[:, :-1]
         if inplace:
             self.samples = C
             return
@@ -96,6 +110,13 @@ class InputManager:
         
     def get_data(self):
         return self.samples, self.labels
+                
+                    
+        
+                
+            
+        
+
                 
                     
         
