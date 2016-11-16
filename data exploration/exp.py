@@ -113,8 +113,49 @@ class ROC:
             dates_names = np.array(json.load(f))
 
         return samples, results, test, wig, vol, dates_names
-    
+   
+def transform_to_ROC(samples, dates_names, results, jump):
 
+    placeholder = np.array( list(map( lambda x: (samples[:, -1]-samples[:, -1-x])/samples[:,-1-x], jump)) ).T
+    print(samples.shape, placeholder.shape, dates_names[:, 0][None].T.shape, results[None].T.shape)
+    ROC = np.hstack([placeholder, dates_names[:, 1][None].T, results[None].T ]).astype(float)
+    return ROC
+ 
+def transform_to_RS(samples, dates_names, results, jump)
+    z = transform_to_ROC(samples, dates_names, results, jump)
+    r = z[np.argsort(z[:, -2]).astype(int), :]
+    col = 1
+    dates_uniq, dates_count = np.unique(r[:,-2], return_counts=True)
+
+    offset = 0
+
+    for i in np.arange(dates_uniq.shape[0]):
+
+        maxi = np.amax(r[offset:offset+dates_count[i], col])
+        if maxi == 0:
+    #         print(dates_count[i])
+            r[offset:offset+dates_count[i], col] = 0
+
+        elif maxi < 0:
+    #         print(maxi, dates_count[i])
+            r[offset:offset+dates_count[i], col] = -maxi/r[offset:offset+dates_count[i], col]
+
+        else:
+            r[offset:offset+dates_count[i], col] /= maxi
+
+
+        offset+=dates_count[i]
+
+    r[r<-1] = -1
+
+    plus = np.where(r[:, -1]==1)[0]
+    minus = np.where(r[:, -1]==0)[0]
+    print(plus.shape[0]/(plus.shape[0]+minus.shape[0]))
+    N = min(plus.shape[0], minus.shape[0])
+    plus = plus[:N]
+    minus = minus[:N]
+
+    wh = np.hstack([plus, minus])
 
 
 def transform_RSI(i, samples, wig, results):
