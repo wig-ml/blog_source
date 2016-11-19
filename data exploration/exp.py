@@ -114,17 +114,17 @@ class ROC:
 
         return samples, results, test, wig, vol, dates_names
    
-def transform_to_ROC(samples, dates_names, results, jump):
-
+def transform_to_ROC(roc, **kwargs):
+    samples, results, dates_names, jump = roc.samples, roc.results, roc.dates_names, roc.jump
     placeholder = np.array( list(map( lambda x: (samples[:, -1]-samples[:, -1-x])/samples[:,-1-x], jump)) ).T
-    print(samples.shape, placeholder.shape, dates_names[:, 0][None].T.shape, results[None].T.shape)
+    #print(samples.shape, placeholder.shape, dates_names[:, 0][None].T.shape, results[None].T.shape)
     ROC = np.hstack([placeholder, dates_names[:, 1][None].T, results[None].T ]).astype(float)
     return ROC
  
-def transform_to_RS(samples, dates_names, results, jump)
+def transform_to_RS(roc, indices, **kwargs)
+    samples, results, dates_names, jump = roc.samples[indices], roc.results[indices], roc.dates_names[indices], roc.jump[indices]
     z = transform_to_ROC(samples, dates_names, results, jump)
     r = z[np.argsort(z[:, -2]).astype(int), :]
-    col = 1
     dates_uniq, dates_count = np.unique(r[:,-2], return_counts=True)
 
     offset = 0
@@ -148,20 +148,13 @@ def transform_to_RS(samples, dates_names, results, jump)
 
     r[r<-1] = -1
 
-    plus = np.where(r[:, -1]==1)[0]
-    minus = np.where(r[:, -1]==0)[0]
-    print(plus.shape[0]/(plus.shape[0]+minus.shape[0]))
-    N = min(plus.shape[0], minus.shape[0])
-    plus = plus[:N]
-    minus = minus[:N]
-
-    wh = np.hstack([plus, minus])
+    return np.vstack([r[:, col], results]).T
 
 
-def transform_RSI(i, samples, wig, results):
-    path_new = os.path.join(os.path.dirname(prices), 'simple neural network/' + directories[i])
+def transform_RSI(roc, indices):
+    #path_new = os.path.join(os.path.dirname(prices), 'simple neural network/' + directories[i])
 
-
+    samples, wig, results = roc.samples[indices], roc.wig[indices], roc.results[indices]
     rel_samples = (samples[:, 1:] - samples[:, :-1])/samples[:, :-1]
     rel_wig = (wig[:, 1:] - wig[:, :-1])/wig[:, :-1]
 
@@ -184,11 +177,11 @@ def transform_RSI(i, samples, wig, results):
 
     rsi_ok = RSI[where_ok]
 
-    return RSI, results_, results, where_ok
+    return np.vstack([rsi_ok, results[where_ok]).T
 
 
-def transform_to_sharpe(samples, wig, results, dates_names):
-
+def transform_to_sharpe(roc, indices):
+    samples, wig, results, dates_names = roc.samples[indices], roc.wig[indices], roc.results[indices], roc.dates_names[indices]
     rel_samples = (samples[:, 1:] - samples[:, :-1])/samples[:, :-1]
     rel_wig = (wig[:, 1:] - wig[:, :-1])/wig[:, :-1] 
     
@@ -224,8 +217,8 @@ def wigify(wig, dates_names, alpha=.8):
         
     return p, dicts_loc
 
-def transform_to_sharpe_EMA(samples, wig, results, dates_names, alpha=.8):
-    
+def transform_to_sharpe_EMA(roc, indices, alpha=.8):
+    samples, wig, results, dates_names = roc.samples[indices], roc.wig[indices], roc.results[indices], roc.dates_names[indices]
     rel_samples = (samples[:, 1:] - samples[:, :-1])/samples[:, :-1]
     
     wig_ema, wig_dict = wigify(wig, dates_names, alpha)
@@ -273,8 +266,8 @@ def transform_to_sharpe_EMA(samples, wig, results, dates_names, alpha=.8):
     return np.vstack([overall_sharpe, results]).T
         
 
-def transform_average(samples, vol, results, alpha=0.9):
-    
+def transform_average(roc, indices, alpha=.8):
+    samples, vol, results = roc.samples[indices], roc.vol[indices], roc.results[indices]
     zeros = np.where(np.sum(vol[:, 1:], axis=1)==0)
     vol[zeros, 1:] = np.random.randn(zeros[0].shape[0], vol.shape[1]-1)/1000
     rel_samples = (samples[:, 1:] - samples[:, :-1])/samples[:, :-1]
